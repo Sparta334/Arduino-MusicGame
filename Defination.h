@@ -1,15 +1,11 @@
 #pragma once
 #include "SSD1306Wire.h"
-#define SongArrayLength  3
-
+#define SongArrayLength  4
 SSD1306Wire display(0x3c, SDA, SCL); 
-int ConfirmBtn  = 27;
-int RightHit =25;
-int LeftHit = 33;
 int Channel = 0;
 int Res = 8;
-int fqz  = 2500;
-int BuzzerPin = 12;
+int fqz  =2000;
+int BuzzerPin =25;
 
 class StartStateDefine{   
 
@@ -42,6 +38,7 @@ public:
     String("Sky Castle") ,  
     String("demon slayer") ,
     String("Senbon Sakura"),
+    String("YOASOBI Tabun"),
 
 
 
@@ -80,10 +77,11 @@ class IAphlaBatPointDefine{
 
 public:
 
-    int16_t Aphlabat_radius = 5;
-    int16_t OffestSpeed = 2 ;
+    float Aphlabat_radius = 6.25;
+    float OffestSpeed = 2;
+    float OffestDelay = 14.0f;
     int16_t HitPos = 20 ;
-    float HitPosTolirance = 1.5f;
+    float HitPosTolirance = 1.85f;
     int16_t HitPosStart_X = 128;
     int16_t HitPosStart_Y = 32;
 

@@ -1,17 +1,22 @@
-
 #include "Defination.h"
 #include "Song.h"
 #include "SSD1306Wire.h"
 #include "Vector.h"
+#include "BluetoothSerial.h"
+#include "driver/gpio.h"
 
+// See the following for generating UUIDs:
+// https://www.uuidgenerator.net/
 
 #define	IMPLEMENTATION	LIFO
-
-
+#define BUZZERPIN GPIO_NUM_25
 
 class StateController;
 class IState;
 class IAphlaBatPoint;
+
+
+BluetoothSerial BT;
 
 
 bool FormerPress( IAphlaBatPoint*  AI  ,  IAphlaBatPoint*  AI2);
@@ -24,9 +29,11 @@ class IAphlaBatPoint{
 
 public:
 
-
-  int16_t _PointX;
-  int16_t _PointY;
+  
+  float OffestCurrentTime = 0;
+  float OffestLastTime = 0  ;
+  float _PointX;
+  float _PointY;
   bool IsPrssppL = false;
   bool IsPrssppR = false;
    bool Prefect = false;
@@ -37,7 +44,6 @@ public:
   bool ISHit = false;
   int Remove = 0;
   
-
 
   virtual void draw(){}
   virtual float Hit( IAphlaBatPoint* Later ){
@@ -98,8 +104,8 @@ public:
     return score;
 
   }
-  virtual bool offest(float& Score , IAphlaBatPoint* Later){ return false;}
-  IAphlaBatPoint(int16_t PointX , int16_t PointY){_PointX = PointX ; _PointY  = PointY; ISHit = false; }
+  virtual bool offest(byte cmd ,float& Score , IAphlaBatPoint* Later ){ return false;}
+  IAphlaBatPoint(float PointX , float PointY){_PointX = PointX ; _PointY  = PointY; ISHit = false; }
   IAphlaBatPoint(){_PointX = 128 ; _PointY  =32;ISHit = false;}
 
 
@@ -112,17 +118,24 @@ class FillCircle : public IAphlaBatPoint{
 
 
 public:
-  FillCircle(int16_t PointX , int16_t PointY) : IAphlaBatPoint(PointX , PointY){
+  FillCircle(float PointX , float PointY) : IAphlaBatPoint(PointX , PointY){
     
   }
 
    
-  bool offest(float& Score , IAphlaBatPoint* Later) override {
+  bool offest(byte cmd ,float& Score , IAphlaBatPoint* Later) override {
     int Temp = 0;
-     this->_PointX-=_IAphlaBatPointDefine.OffestSpeed;
+    OffestCurrentTime = millis();
+     if(OffestCurrentTime - OffestLastTime >= _IAphlaBatPointDefine.OffestDelay ){
 
-    if( digitalRead(LeftHit) == HIGH && (!IsPrssppL)){
-      
+          this->_PointX-=_IAphlaBatPointDefine.OffestSpeed;
+          OffestLastTime = OffestCurrentTime;
+     }
+
+     
+    if(cmd == 4 && (!IsPrssppL)){
+
+        Serial.println("Fill");
         Temp = this->Hit(Later);
         Score+=Temp ;
 
@@ -130,7 +143,7 @@ public:
         IsPrssppL = true;
 
     }
-    if( digitalRead(LeftHit) == LOW && (IsPrssppL)){
+    if(  cmd ==6 && (IsPrssppL)){
 
         IsPrssppL = false;
 
@@ -154,25 +167,30 @@ class HollowCircle: public IAphlaBatPoint{
 
 public:
 
-  HollowCircle(int16_t PointX , int16_t PointY) : IAphlaBatPoint(PointX , PointY){
+  HollowCircle(float PointX , float PointY) : IAphlaBatPoint(PointX , PointY){
 
   }
 
 
-  bool offest(float& Score , IAphlaBatPoint* Later) override {
+  bool offest(byte cmd ,float& Score , IAphlaBatPoint* Later) override {
 
       int Temp = 0;
-     _PointX-=_IAphlaBatPointDefine.OffestSpeed;
+      OffestCurrentTime = millis();
+     if(OffestCurrentTime - OffestLastTime >= _IAphlaBatPointDefine.OffestDelay ){
 
-    if( digitalRead(RightHit) == HIGH && (!IsPrssppR)){
+          this->_PointX-=_IAphlaBatPointDefine.OffestSpeed;
+          OffestLastTime = OffestCurrentTime;
+     }
 
+    if( cmd == 5 && (!IsPrssppR)){
+      Serial.println("Hollow");
        Temp = this->Hit(Later);
         Score+=Temp ;
 
         IsPrssppR = true;
 
     }
-    if( digitalRead(RightHit) == LOW && (IsPrssppR)){
+    if(  cmd ==6 && (IsPrssppR)){
 
         IsPrssppR = false;
 
@@ -197,7 +215,7 @@ class FillComboHit : public IAphlaBatPoint{
 
 
 public:
-  FillComboHit(int16_t PointX , int16_t PointY) : IAphlaBatPoint(PointX , PointY){
+  FillComboHit(float PointX , float PointY) : IAphlaBatPoint(PointX , PointY){
     
   }
 
@@ -217,29 +235,34 @@ public:
       return score;
 
   }
-  bool offest(float& Score , IAphlaBatPoint* Later) override {
+  bool offest(byte cmd ,float& Score , IAphlaBatPoint* Later) override {
 
-     _PointX-=_IAphlaBatPointDefine.OffestSpeed;
+      OffestCurrentTime = millis();
+     if(OffestCurrentTime - OffestLastTime >= _IAphlaBatPointDefine.OffestDelay ){
 
-    if( digitalRead(RightHit) == HIGH && (!IsPrssppR)){
+          this->_PointX-=_IAphlaBatPointDefine.OffestSpeed;
+          OffestLastTime = OffestCurrentTime;
+     }
+
+    if(  cmd ==4 && (!IsPrssppR)){
 
         Score+=this->Hit(Later);
         IsPrssppR = true;
 
     }
-    if( digitalRead(RightHit) == LOW && (IsPrssppR)){
+    if( cmd ==6 && (IsPrssppR)){
 
         IsPrssppR = false;
 
     }
 
-    if( digitalRead(LeftHit) == HIGH && (!IsPrssppL)){
+    if( cmd ==5 && (!IsPrssppL)){
 
         Score+=this->Hit(Later);
         IsPrssppL = true;
 
     }
-    if( digitalRead(LeftHit) == LOW && (IsPrssppL)){
+    if( cmd ==6 && (IsPrssppL)){
 
         IsPrssppL = false;
 
@@ -250,13 +273,42 @@ public:
   }
 
 
-  virtual void draw() override {
+  void draw() override {
 
     display.fillCircle( _PointX , _PointY , _IAphlaBatPointDefine.Aphlabat_radius*2.3f);
 
   }
 
 };
+
+class None : public IAphlaBatPoint{
+
+
+public:
+  None(float PointX , float PointY) : IAphlaBatPoint(PointX , PointY){
+    
+  }
+
+  
+  bool offest(byte cmd ,float& Score , IAphlaBatPoint* Later) override {
+
+      OffestCurrentTime = millis();
+     if(OffestCurrentTime - OffestLastTime >= _IAphlaBatPointDefine.OffestDelay ){
+
+          this->_PointX-=_IAphlaBatPointDefine.OffestSpeed;
+          OffestLastTime = OffestCurrentTime;
+     }
+
+    return false;
+
+  }
+
+
+  void draw() override{};
+
+};
+
+
 
   Vector<IAphlaBatPoint*> V0  ;
 
@@ -275,7 +327,7 @@ public:
   IState(){}
   IState(StateController* stateController );   /*傳入StateController                                                                   這樣才能藉由Controller
                                                                                        更新State 
-                                                                                        */
+                                                                                        */ 
   virtual void StateBegin(){}
   virtual void StateUpdate(){}
   virtual void StateEnd(){}
@@ -387,39 +439,32 @@ public:
 
 private:
 
-  int BtnChoice( int index) {
+  int BtnChoice(int  cmd , int index) {
 
-      if( digitalRead(RightHit) == HIGH  &&  (! IsPressR) ){
 
-          index+=1;
-          if(index >= _MainMenuStateDefine.SongArray ){
-            index = 0;
-          }
+        if( cmd == 2  ){
+            
+            index+=1;
+            if(index >= _MainMenuStateDefine.SongArray ){
+              index = 0;
+            }
 
-          IsPressR = true;
+           
 
-      }
-
-      if(digitalRead(RightHit) == LOW  &&  (IsPressR)){
-        IsPressR = false;
-      }
+        }
 
 
 
-      if( digitalRead(LeftHit) == HIGH  &&  (! IsPressL) ){
 
-          index-=1;
-          if(index < 0 ){
-            index =  _MainMenuStateDefine.SongArray-1;
-          }
-          IsPressL = true;
+        if( cmd == 1 ){
 
-      }
+            index-=1;
+            if(index < 0 ){
+              index =  _MainMenuStateDefine.SongArray-1;
+            }
+        }
 
-      if(digitalRead(LeftHit) == LOW  &&  (IsPressL)){
-        IsPressL = false;
-      }
-    
+     
     Page = (index /4) +1;
     return index;
 
@@ -477,17 +522,16 @@ public:
 
   int _index;
  
-  int CurrentTime;
-  int LastTime;
-  int CurrentTimeHit;
-  int LastTimeHit;
-  int TextTimeCurrent;
-  int TextTimeLast;
-  int OffestCurrentTime ;
+  float CurrentTime;
+  float LastTime;
+  float CurrentTimeHit;
+  float LastTimeHit;
+  float TextTimeCurrent;
+  float TextTimeLast;
 
-  int _SongCurrentTime ;
-  int _SongLastTime ;
-  int OffestLastTime ;
+  float _SongCurrentTime ;
+  float _SongLastTime ;
+  
   unsigned long _SongStartTime;
 
   unsigned long _SongIndex ;
@@ -507,6 +551,7 @@ public:
 
   unsigned long MusicIndex;
   bool PlayB = true;
+  byte cmd =-1;
 
   
   /*繼承覆寫*/
@@ -524,12 +569,12 @@ public:
     CurrentTimeHit = millis();
     _SongCurrentTime = millis();
     TextTimeCurrent = millis();
-    OffestCurrentTime = millis();
+
     LastTime = CurrentTime;
     LastTimeHit = CurrentTimeHit;
     _SongLastTime =  _SongCurrentTime ;
     TextTimeLast= TextTimeCurrent;
-    OffestLastTime = OffestCurrentTime;
+    
     _SongStartTime = SongStartTime[_index];
     Score = 0;
     _SongIndex  = 0;
@@ -538,8 +583,11 @@ public:
 
     _SongBGM = SongBGM[_index]  ;
     V0.Clear();
+    Serial.println(5000.0f/_SongBPM);
 
-  }
+
+
+  } 
 
    virtual void StateUpdate()  override;
 
@@ -581,23 +629,17 @@ public:
 
   void SpawnHitPoint(){
 
-    if(PlayB){
+
+    CurrentTimeHit = millis();
+
+    if(CurrentTimeHit  - LastTimeHit  >  (4885.0f/_SongBPM) ){
 
       IAphlaBatPoint*  Temp =   String2Aphlabat (_HitPoint);
 
-      if(Temp != nullptr ){
-           V0.PushBack( Temp );
-      }
+      if( Temp != nullptr)
+        V0.PushBack( Temp );
 
-      PlayB  = false;
-
-    }
-
-    if(CurrentTimeHit  - LastTimeHit  >= (5000.0f/SongBPM[_index] )  && (!PlayB) ){
-
-      
       _SongIndex+=1;
-      PlayB = true;
 
       LastTimeHit = CurrentTimeHit;
    }
@@ -615,15 +657,12 @@ public:
 
       
       
-        SpawnHitPoint();
-
-      if(OffestCurrentTime - OffestLastTime >= 16 ){
-
+      SpawnHitPoint();
       for(int i = 0 ; i <V0.Size(); i++){
 
-         
+        
           
-          IsTemp = V0[i]->offest(Score , V0[i]);
+          IsTemp = V0[i]->offest(cmd, Score , V0[i]);
 
           if(i>0){
             V0[i]->ISHit  =false;
@@ -645,12 +684,9 @@ public:
           Destroy(i);
         }
 
-        OffestLastTime = OffestCurrentTime;
-         
-      }
 
        
-         
+      }
 
 
 
@@ -663,9 +699,8 @@ public:
             Destroy(0);
        }
         
-    }
-       
-    }   
+      }
+        
 
        if(Pont.Prefect ){
               display.setFont(ArialMT_Plain_24);
@@ -755,14 +790,14 @@ public:
   unsigned long LastTime;
   float _Score;
    int16_t _index;
-
+  byte cmd = -1;
   /*繼承覆寫*/
   
   virtual void StateBegin() override {
     CurrentTime = millis();
     LastTime = CurrentTime ;
 
-
+  
 
     display.clear();
 
@@ -842,16 +877,30 @@ StateController* stateController;
 
 void setup() {
 
+  /*嘗試拉高電壓*/
+    gpio_config_t io_conf = {};
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pin_bit_mask = 1ULL<<BUZZERPIN;
+    io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
 
+    gpio_config(&io_conf);
+
+    gpio_set_level(BUZZERPIN ,1);
+  /*wifi 上傳*/
+  
   Serial.begin(115200);
+  Serial.println("Booting");
+  BT.begin("MusicGame");
+  //SerialBT.begin("MusicGame");
+
   // put your setup code here, to run once:
    stateController = new StateController();
 
-  ledcSetup(Channel , Res ,  fqz);
+  ledcSetup(Channel , fqz, Res );
+
   ledcAttachPin(BuzzerPin,  Channel );
-  pinMode(RightHit , INPUT);
-  pinMode(LeftHit , INPUT);
-  pinMode(ConfirmBtn , INPUT);
     
   display.init();
   display.flipScreenVertically();
@@ -863,11 +912,7 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
 
-
   stateController->StateUpdate();
-  
-  delay(16);
-
 }
 
 
@@ -899,18 +944,20 @@ void MainMenuState::StateEnd(){
 
 
 void MainMenuState::StateUpdate(){
-      _index = BtnChoice(_index);
+
+      byte cmd = BT.read();
+
+      _index = BtnChoice(cmd , _index);
         CursorOffset();
+
         Draw();
 
        /*切換State*/
+        if( cmd == 3  ){
 
+            _stateController->SetState(new MusicState( _stateController , _index) , "MusicState"  );
 
-       if(  digitalRead(ConfirmBtn)  == HIGH ){
-
-          _stateController->SetState(new MusicState( _stateController , _index) , "MusicState"  );
-
-       }
+        }
 }
 
 void MusicState::StateEnd(){
@@ -923,12 +970,16 @@ void MusicState::StateEnd(){
 
 void MusicState::StateUpdate(){
 
+    cmd = BT.read();
+    
     display.clear();
    CurrentTime = millis();
       CurrentTimeHit = millis();
       _SongCurrentTime = millis();
       TextTimeCurrent = millis();
      
+      Draw();
+
      if(_SongCurrentTime -  _SongLastTime > SongStartTime[_index]){
         PlayMusic();
      }
@@ -937,13 +988,14 @@ void MusicState::StateUpdate(){
      }
 
       DrawBack();
-      Draw();
+      
       
       display.display();
        /*切換State*/
 
       if(_SongIndexBuzzer  >= _SongLength){
-           _stateController->SetState(new CalculateState(_stateController,Score , _index) , "CalculateState" );
+            BT.write(0);
+            _stateController->SetState(new CalculateState(_stateController,Score , _index) , "CalculateState" );
       }
        
        
@@ -958,12 +1010,11 @@ void CalculateState::StateEnd(){
 
 void CalculateState::StateUpdate(){
   CurrentTime = millis();
-
-
+  cmd = BT.read();
 
     /*切換State*/
 
-    if(CurrentTime - LastTime > _ClaCulateStateDefine.StartStateOverMillSec && digitalRead(ConfirmBtn) == HIGH){
+    if( cmd == 7){
 
       _stateController->SetState( new StartState( _stateController ) , "StartState" );
 
