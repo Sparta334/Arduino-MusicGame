@@ -145,17 +145,20 @@ public:
 
             
           IsPrssppL = true;
+          LastShakeTime = CurrentShakeTime;
 
       }
+
+
+    }
+
       if(  cmd ==6 && (IsPrssppL)){
 
           IsPrssppL = false;
 
       }
 
-      LastShakeTime = CurrentShakeTime;
-
-    }
+     
 
     return Temp;
 
@@ -196,16 +199,19 @@ public:
        Temp = this->Hit();
 
         IsPrssppR = true;
+        LastShakeTime = CurrentShakeTime;
 
     }
-    if(  cmd ==6 && (IsPrssppR)){
+   
+
+    
+ }
+
+  if(  cmd ==6 && (IsPrssppR)){
 
         IsPrssppR = false;
 
-    }
-
-    LastShakeTime = CurrentShakeTime;
- }
+  }
 
     return Temp;
 
@@ -642,7 +648,7 @@ public:
 
     CurrentTimeHit = millis();
 
-    if(CurrentTimeHit  - LastTimeHit  >=   (4875.0f/_SongBPM)){
+    if(CurrentTimeHit  - LastTimeHit  >=   (4800.0f/_SongBPM)){
 
       IAphlaBatPoint*  Temp =   String2Aphlabat (_HitPoint);
 
